@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h1>Práctica de Ehffhgxamen</h1>
+    <h1>Práctica hhhhhhhhhhhhde Examen</h1>
     <input type="file" id="pdf-upload" accept="application/pdf">
     
     <div id="quiz-container">
@@ -55,27 +55,31 @@
             for (let i = 1; i <= pdfDoc.numPages; i++) {
                 promises.push(
                     pdfDoc.getPage(i).then(page => 
-                        Promise.all([page.getTextContent(), renderImage(page)])
+                        Promise.all([page.getTextContent(), renderImage(page)]).then(([textContent, image]) => {
+                            let text = textContent.items.map(i => i.str).join(' ');
+                            console.log(`Página ${i} extraída:`, text);
+                            
+                            let match = text.match(/(.*?)(Verdadero|Falso)/i);
+                            if (match) {
+                                console.log(`Pregunta detectada: ${match[1].trim()} | Respuesta: ${match[2]}`);
+                                return {
+                                    text: match[1].trim(),
+                                    correct: match[2].toLowerCase() === 'verdadero',
+                                    image: image
+                                };
+                            }
+                            console.warn(`No se detectaron preguntas en la página ${i}`);
+                            return null;
+                        })
                     )
                 );
             }
             
             Promise.all(promises).then(results => {
-                questions = results.map(([textContent, image]) => {
-                    let text = textContent.items.map(i => i.str).join(' ');
-                    let match = text.match(/(.*?)(Verdadero|Falso)/i);
-                    if (match) {
-                        return {
-                            text: match[1].trim(),
-                            correct: match[2].toLowerCase() === 'verdadero',
-                            image: image
-                        };
-                    }
-                    return null;
-                }).filter(q => q !== null);
+                questions = results.filter(q => q !== null);
                 
                 if (questions.length === 0) {
-                    alert('No se encontraron preguntas en el PDF.');
+                    alert('No se encontraron preguntas en el PDF. Verifica su formato.');
                     return;
                 }
                 
@@ -101,8 +105,11 @@
                 };
                 
                 page.render(renderContext).promise.then(() => {
-                    resolve(canvas.toDataURL("image/png"));
+                    let imageData = canvas.toDataURL("image/png");
+                    console.log("Imagen extraída de página:", imageData.substring(0, 30) + '...');
+                    resolve(imageData);
                 }).catch(() => {
+                    console.warn("No se pudo extraer imagen de la página");
                     resolve(null);
                 });
             });
