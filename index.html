@@ -9,6 +9,7 @@
         body { font-family: Arial, sans-serif; text-align: center; }
         #quiz-container { display: none; margin-top: 20px; }
         .question { margin: 20px 0; }
+        canvas { border: 1px solid black; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -18,6 +19,7 @@
     
     <div id="quiz-container">
         <p id="question-text"></p>
+        <canvas id="question-image"></canvas>
         <button onclick="answer(true)">Verdadero</button>
         <button onclick="answer(false)">Falso</button>
         <p id="feedback"></p>
@@ -27,6 +29,7 @@
     <script>
         let questions = [];
         let currentIndex = 0;
+        let pdfDoc = null;
 
         function processPDF() {
             const fileInput = document.getElementById('pdf-upload');
@@ -37,20 +40,28 @@
             reader.onload = function () {
                 const typedArray = new Uint8Array(this.result);
                 pdfjsLib.getDocument(typedArray).promise.then(pdf => {
-                    let textPromises = [];
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        textPromises.push(pdf.getPage(i).then(page => page.getTextContent()));
-                    }
-                    
-                    Promise.all(textPromises).then(pages => {
-                        let extractedText = pages.map(page => page.items.map(i => i.str).join(' ')).join('\n');
-                        extractQuestions(extractedText);
-                    });
+                    pdfDoc = pdf;
+                    extractContent();
                 });
             };
             reader.readAsArrayBuffer(file);
         }
-        
+
+        function extractContent() {
+            let textPromises = [];
+            let imagePromises = [];
+            
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                textPromises.push(pdfDoc.getPage(i).then(page => page.getTextContent()));
+                imagePromises.push(pdfDoc.getPage(i).then(page => renderImage(page)));
+            }
+            
+            Promise.all(textPromises).then(pages => {
+                let extractedText = pages.map(page => page.items.map(i => i.str).join(' ')).join('\n');
+                extractQuestions(extractedText);
+            });
+        }
+
         function extractQuestions(text) {
             let questionRegex = /(.*?)(Verdadero|Falso)/gi;
             questions = [];
@@ -68,9 +79,25 @@
             showQuestion();
         }
 
+        function renderImage(page) {
+            let viewport = page.getViewport({ scale: 1.5 });
+            let canvas = document.getElementById('question-image');
+            let context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            let renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            
+            return page.render(renderContext).promise;
+        }
+
         function showQuestion() {
             if (currentIndex >= questions.length) return alert('Fin del cuestionario');
             document.getElementById('question-text').innerText = questions[currentIndex].text;
+            pdfDoc.getPage(currentIndex + 1).then(page => renderImage(page));
         }
 
         function answer(userAnswer) {
