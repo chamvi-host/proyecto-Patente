@@ -13,7 +13,8 @@
     </style>
 </head>
 <body>
-    <h1>Quiz Patente</h1>
+    <h1>Práctica de Examen P</h1>
+    <input type="file" id="pdf-upload" accept="application/pdf">
     
     <div id="quiz-container">
         <p id="question-text"></p>
@@ -29,16 +30,20 @@
         let currentIndex = 0;
         let pdfDoc = null;
 
-        document.addEventListener("DOMContentLoaded", function() {
-            loadPDF("domande d'esame.pdf");
+        document.getElementById("pdf-upload").addEventListener("change", function(event) {
+            let file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function() {
+                    let typedarray = new Uint8Array(reader.result);
+                    pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                        pdfDoc = pdf;
+                        extractContent();
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
         });
-
-        function loadPDF(url) {
-            pdfjsLib.getDocument(url).promise.then(pdf => {
-                pdfDoc = pdf;
-                extractContent();
-            });
-        }
 
         function extractContent() {
             let promises = [];
