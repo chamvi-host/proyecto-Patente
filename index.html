@@ -12,14 +12,18 @@
             const file = event.target.files[0];
             if (!file) return;
             
+            console.log("PDF cargado:", file.name);
+            
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log("Lectura del PDF completada");
                 // Aquí debes agregar la lógica para extraer preguntas del PDF
                 // Por ahora, simularemos algunas preguntas de ejemplo
                 preguntas = [
                     { numero: 21810, texto: "Il segnale raffigurato preavvisa confine di Stato con un Paese che fa parte dell'Unione Europea", respuesta: "VERO" },
                     { numero: 21811, texto: "Il segnale raffigurato indica una strada chiusa", respuesta: "FALSO" }
                 ];
+                console.log("Preguntas extraídas:", preguntas);
                 mostrarPregunta();
             };
             reader.readAsArrayBuffer(file);
@@ -53,7 +57,7 @@
     <h1>Práctica de Examen</h1>
     <input type="file" accept="application/pdf" onchange="cargarPDF(event)">
     <div>
-        <p id="pregunta">Sube un PDF para comenzar</p>
+        <p id="pregunta">Sube un PDF para comenzar ti</p>
         <button onclick="responder('VERO')">Verdadero</button>
         <button onclick="responder('FALSO')">Falso</button>
         <p id="resultado"></p>
@@ -64,4 +68,3 @@
     </div>
 </body>
 </html>
-
