@@ -4,139 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Práctica de Examen</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #quiz-container { display: none; margin-top: 20px; }
-        .question { margin: 20px 0; }
-        canvas { border: 1px solid black; margin-top: 10px; max-width: 100%; }
-    </style>
-</head>
-<body>
-    <h1>Pddddddráctica de Examen</h1>
-    <input type="file" id="pdf-upload" accept="application/pdf">
-    
-    <div id="quiz-container">
-        <p id="question-text"></p>
-        <canvas id="question-image"></canvas>
-        <button onclick="answer(true)">Verdadero</button>
-        <button onclick="answer(false)">Falso</button>
-        <p id="feedback"></p>
-        <button onclick="nextQuestion()">Siguiente</button>
-    </div>
-    
     <script>
-        let questions = [];
-        let currentIndex = 0;
-        let pdfDoc = null;
+        let preguntas = [];
+        let indiceActual = 0;
 
-        document.getElementById("pdf-upload").addEventListener("change", function(event) {
-            let file = event.target.files[0];
-            if (file) {
-                let reader = new FileReader();
-                reader.onload = function() {
-                    let typedarray = new Uint8Array(reader.result);
-                    pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-                        pdfDoc = pdf;
-                        console.log("PDF cargado correctamente");
-                        extractQuestions();
-                    }).catch(error => {
-                        console.error('Error al cargar el PDF:', error);
-                        alert('Error al cargar el PDF. Asegúrate de que el archivo es válido.');
-                    });
-                };
-                reader.readAsArrayBuffer(file);
-            }
-        });
-
-        function extractQuestions() {
-            let promises = [];
+        function cargarPDF(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
-                promises.push(
-                    pdfDoc.getPage(i).then(page => 
-                        Promise.all([page.getTextContent(), extractImage(page)]).then(([textContent, image]) => {
-                            let text = textContent.items.map(i => i.str).join(' ');
-                            console.log(`Página ${i} extraída:`, text);
-                            
-                            let match = text.match(/(.*?)\?/);
-                            if (match) {
-                                console.log(`Pregunta detectada: ${match[1].trim()}`);
-                                return {
-                                    text: match[1].trim() + "?",
-                                    image: image
-                                };
-                            }
-                            console.warn(`No se detectaron preguntas en la página ${i}`);
-                            return null;
-                        })
-                    )
-                );
-            }
-            
-            Promise.all(promises).then(results => {
-                questions = results.filter(q => q !== null);
-                
-                if (questions.length === 0) {
-                    alert('No se encontraron preguntas en el PDF. Verifica su formato.');
-                    return;
-                }
-                
-                document.getElementById('quiz-container').style.display = 'block';
-                showQuestion();
-            }).catch(error => {
-                console.error('Error al procesar el PDF:', error);
-                alert('Error al procesar el PDF.');
-            });
-        }
-
-        function extractImage(page) {
-            return new Promise(resolve => {
-                let viewport = page.getViewport({ scale: 2.0 });
-                let canvas = document.createElement('canvas');
-                let context = canvas.getContext('2d');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                let renderContext = {
-                    canvasContext: context,
-                    viewport: viewport
-                };
-                
-                page.render(renderContext).promise.then(() => {
-                    let imageData = canvas.toDataURL("image/png");
-                    console.log("Imagen extraída de página:", imageData.substring(0, 30) + '...');
-                    resolve(imageData);
-                }).catch(() => {
-                    console.warn("No se pudo extraer imagen de la página");
-                    resolve(null);
-                });
-            });
-        }
-
-        function showQuestion() {
-            if (currentIndex >= questions.length) return alert('Fin del cuestionario');
-            document.getElementById('question-text').innerText = questions[currentIndex].text;
-            let canvas = document.getElementById('question-image');
-            let context = canvas.getContext('2d');
-            let img = new Image();
-            img.onload = () => {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                context.drawImage(img, 0, 0);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Aquí debes agregar la lógica para extraer preguntas del PDF
+                // Por ahora, simularemos algunas preguntas de ejemplo
+                preguntas = [
+                    { numero: 21810, texto: "Il segnale raffigurato preavvisa confine di Stato con un Paese che fa parte dell'Unione Europea", respuesta: "VERO" },
+                    { numero: 21811, texto: "Il segnale raffigurato indica una strada chiusa", respuesta: "FALSO" }
+                ];
+                mostrarPregunta();
             };
-            img.src = questions[currentIndex].image || '';
+            reader.readAsArrayBuffer(file);
         }
 
-        function answer(userAnswer) {
-            document.getElementById('feedback').innerText = 'Respuesta registrada ✅';
+        function mostrarPregunta() {
+            if (preguntas.length === 0) return;
+            const pregunta = preguntas[indiceActual];
+            document.getElementById("pregunta").innerText = pregunta.texto;
+            document.getElementById("resultado").innerText = "";
         }
 
-        function nextQuestion() {
-            currentIndex++;
-            document.getElementById('feedback').innerText = '';
-            showQuestion();
+        function responder(respuesta) {
+            if (preguntas.length === 0) return;
+            const pregunta = preguntas[indiceActual];
+            const resultado = respuesta === pregunta.respuesta ? "Correcto" : "Incorrecto";
+            document.getElementById("resultado").innerText = resultado;
+        }
+
+        function cambiarPregunta(direccion) {
+            if (direccion === "siguiente" && indiceActual < preguntas.length - 1) {
+                indiceActual++;
+            } else if (direccion === "atras" && indiceActual > 0) {
+                indiceActual--;
+            }
+            mostrarPregunta();
         }
     </script>
+</head>
+<body>
+    <h1>Práctica de Examen</h1>
+    <input type="file" accept="application/pdf" onchange="cargarPDF(event)">
+    <div>
+        <p id="pregunta">Sube un PDF para comenzar</p>
+        <button onclick="responder('VERO')">Verdadero</button>
+        <button onclick="responder('FALSO')">Falso</button>
+        <p id="resultado"></p>
+    </div>
+    <div>
+        <button onclick="cambiarPregunta('atras')">Atrás</button>
+        <button onclick="cambiarPregunta('siguiente')">Siguiente</button>
+    </div>
 </body>
 </html>
+
