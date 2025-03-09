@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Práctica de Examen</title>
+    <title>Práctica de Examensss</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
@@ -59,18 +59,15 @@
             }
             
             Promise.all(promises).then(results => {
-                questions = results.map(([textContent, image]) => {
+                questions = results.flatMap(([textContent, image]) => {
                     let text = textContent.items.map(i => i.str).join(' ');
-                    let match = text.match(/(.*?)(Verdadero|Falso)/i);
-                    if (match) {
-                        return {
-                            text: match[1].trim(),
-                            correct: match[2].toLowerCase() === 'verdadero',
-                            image: image
-                        };
-                    }
-                    return null;
-                }).filter(q => q !== null);
+                    let matches = [...text.matchAll(/(.*?)(Verdadero|Falso)/gi)];
+                    return matches.map(match => ({
+                        text: match[1].trim(),
+                        correct: match[2].toLowerCase() === 'verdadero',
+                        image: image
+                    }));
+                });
                 
                 if (questions.length === 0) {
                     alert('No se encontraron preguntas en el PDF.');
