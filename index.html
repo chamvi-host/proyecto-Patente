@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Práctica de Examensss</title>
+    <title>Práctica de Examen</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h1>Práctica de Examen</h1>
+    <h1>Práctica de Examdddd sdfen</h1>
     <input type="file" id="pdf-upload" accept="application/pdf">
     
     <div id="quiz-container">
@@ -38,8 +38,10 @@
                     let typedarray = new Uint8Array(reader.result);
                     pdfjsLib.getDocument(typedarray).promise.then(pdf => {
                         pdfDoc = pdf;
+                        console.log("PDF cargado correctamente");
                         extractContent();
                     }).catch(error => {
+                        console.error('Error al cargar el PDF:', error);
                         alert('Error al cargar el PDF. Asegúrate de que el archivo es válido.');
                     });
                 };
@@ -59,15 +61,18 @@
             }
             
             Promise.all(promises).then(results => {
-                questions = results.flatMap(([textContent, image]) => {
+                questions = results.map(([textContent, image]) => {
                     let text = textContent.items.map(i => i.str).join(' ');
-                    let matches = [...text.matchAll(/(.*?)(Verdadero|Falso)/gi)];
-                    return matches.map(match => ({
-                        text: match[1].trim(),
-                        correct: match[2].toLowerCase() === 'verdadero',
-                        image: image
-                    }));
-                });
+                    let match = text.match(/(.*?)(Verdadero|Falso)/i);
+                    if (match) {
+                        return {
+                            text: match[1].trim(),
+                            correct: match[2].toLowerCase() === 'verdadero',
+                            image: image
+                        };
+                    }
+                    return null;
+                }).filter(q => q !== null);
                 
                 if (questions.length === 0) {
                     alert('No se encontraron preguntas en el PDF.');
@@ -77,6 +82,7 @@
                 document.getElementById('quiz-container').style.display = 'block';
                 showQuestion();
             }).catch(error => {
+                console.error('Error al procesar el PDF:', error);
                 alert('Error al procesar el PDF.');
             });
         }
