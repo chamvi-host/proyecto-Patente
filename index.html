@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h1>Práctica de Examen P</h1>
+    <h1>Práctica de Examen</h1>
     <input type="file" id="pdf-upload" accept="application/pdf">
     
     <div id="quiz-container">
@@ -39,6 +39,8 @@
                     pdfjsLib.getDocument(typedarray).promise.then(pdf => {
                         pdfDoc = pdf;
                         extractContent();
+                    }).catch(error => {
+                        alert('Error al cargar el PDF. Asegúrate de que el archivo es válido.');
                     });
                 };
                 reader.readAsArrayBuffer(file);
@@ -77,12 +79,14 @@
                 
                 document.getElementById('quiz-container').style.display = 'block';
                 showQuestion();
+            }).catch(error => {
+                alert('Error al procesar el PDF.');
             });
         }
 
         function renderImage(page) {
             return new Promise(resolve => {
-                let viewport = page.getViewport({ scale: 1.5 });
+                let viewport = page.getViewport({ scale: 2.0 });
                 let canvas = document.createElement('canvas');
                 let context = canvas.getContext('2d');
                 canvas.width = viewport.width;
@@ -94,7 +98,9 @@
                 };
                 
                 page.render(renderContext).promise.then(() => {
-                    resolve(canvas.toDataURL());
+                    resolve(canvas.toDataURL("image/png"));
+                }).catch(() => {
+                    resolve(null);
                 });
             });
         }
@@ -110,7 +116,7 @@
                 canvas.height = img.height;
                 context.drawImage(img, 0, 0);
             };
-            img.src = questions[currentIndex].image;
+            img.src = questions[currentIndex].image || '';
         }
 
         function answer(userAnswer) {
