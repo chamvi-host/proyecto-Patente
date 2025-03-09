@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Práctica de Examen</title>
+    <title>Práctica de Ecccxamen</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         let preguntas = [];
@@ -21,49 +21,64 @@
                 const typedarray = new Uint8Array(e.target.result);
                 const pdf = await pdfjsLib.getDocument(typedarray).promise;
                 
-                let textoCompleto = "";
+                preguntas = [];
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
+                    let texto = "";
                     textContent.items.forEach(item => {
-                        textoCompleto += item.str + " ";
+                        texto += item.str + " ";
                     });
+                    
+                    // Extraer solo la pregunta
+                    const regex = /testo domanda:\s*(.*?)\s*(?:VERO|FALSO)/i;
+                    const match = regex.exec(texto);
+                    if (match) {
+                        const pregunta = { texto: match[1], imagen: null };
+                        
+                        // Extraer imágenes
+                        const operatorList = await page.getOperatorList();
+                        const imageOps = operatorList.fnArray
+                            .map((fn, index) => (fn === pdfjsLib.OPS.paintImageXObject ? index : -1))
+                            .filter(index => index !== -1);
+                        
+                        if (imageOps.length > 0) {
+                            const imgIndex = imageOps[0];
+                            const imgKey = operatorList.argsArray[imgIndex][0];
+                            const image = await page.objs.get(imgKey);
+                            
+                            if (image) {
+                                const canvas = document.createElement("canvas");
+                                const ctx = canvas.getContext("2d");
+                                canvas.width = image.width;
+                                canvas.height = image.height;
+                                ctx.putImageData(image, 0, 0);
+                                pregunta.imagen = canvas.toDataURL();
+                            }
+                        }
+                        
+                        preguntas.push(pregunta);
+                    }
                 }
                 
-                console.log("Texto extraído del PDF:", textoCompleto);
-                procesarTexto(textoCompleto);
+                console.log("Preguntas extraídas:", preguntas);
+                mostrarPregunta();
             };
             reader.readAsArrayBuffer(file);
-        }
-
-        function procesarTexto(texto) {
-            preguntas = [];
-            const regex = /numero domanda:\s*(\d+)\s*testo domanda:\s*(.*?)\s*(VERO|FALSO)/gi;
-            let match;
-            while ((match = regex.exec(texto)) !== null) {
-                preguntas.push({
-                    numero: match[1],
-                    texto: match[2],
-                    respuesta: match[3]
-                });
-            }
-            
-            console.log("Preguntas extraídas:", preguntas);
-            mostrarPregunta();
         }
 
         function mostrarPregunta() {
             if (preguntas.length === 0) return;
             const pregunta = preguntas[indiceActual];
             document.getElementById("pregunta").innerText = pregunta.texto;
-            document.getElementById("resultado").innerText = "";
-        }
-
-        function responder(respuesta) {
-            if (preguntas.length === 0) return;
-            const pregunta = preguntas[indiceActual];
-            const resultado = respuesta === pregunta.respuesta ? "Correcto" : "Incorrecto";
-            document.getElementById("resultado").innerText = resultado;
+            
+            const imgElement = document.getElementById("imagen");
+            if (pregunta.imagen) {
+                imgElement.src = pregunta.imagen;
+                imgElement.style.display = "block";
+            } else {
+                imgElement.style.display = "none";
+            }
         }
 
         function cambiarPregunta(direccion) {
@@ -81,9 +96,7 @@
     <input type="file" accept="application/pdf" onchange="cargarPDF(event)">
     <div>
         <p id="pregunta">Sube un PDF para comenzar</p>
-        <button onclick="responder('VERO')">Verdadero</button>
-        <button onclick="responder('FALSO')">Falso</button>
-        <p id="resultado"></p>
+        <img id="imagen" style="max-width: 100%; display: none;" alt="Imagen de la pregunta">
     </div>
     <div>
         <button onclick="cambiarPregunta('atras')">Atrás</button>
