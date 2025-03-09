@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Práctica de Examen</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #quiz-container { display: none; margin-top: 20px; }
+        .question { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Sube tu PDF y Practica</h1>
+    <input type="file" id="pdf-upload" accept="application/pdf">
+    <button onclick="processPDF()">Cargar Preguntas</button>
+    
+    <div id="quiz-container">
+        <p id="question-text"></p>
+        <button onclick="answer(true)">Verdadero</button>
+        <button onclick="answer(false)">Falso</button>
+        <p id="feedback"></p>
+        <button onclick="nextQuestion()">Siguiente</button>
+    </div>
+    
+    <script>
+        let questions = [];
+        let currentIndex = 0;
+
+        function processPDF() {
+            const fileInput = document.getElementById('pdf-upload');
+            const file = fileInput.files[0];
+            if (!file) return alert('Sube un archivo PDF primero.');
+            
+            const reader = new FileReader();
+            reader.onload = function () {
+                const typedArray = new Uint8Array(this.result);
+                pdfjsLib.getDocument(typedArray).promise.then(pdf => {
+                    let textPromises = [];
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        textPromises.push(pdf.getPage(i).then(page => page.getTextContent()));
+                    }
+                    
+                    Promise.all(textPromises).then(pages => {
+                        let extractedText = pages.map(page => page.items.map(i => i.str).join(' ')).join('\n');
+                        extractQuestions(extractedText);
+                    });
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function extractQuestions(text) {
+            let questionRegex = /(.*?)(Verdadero|Falso)/gi;
+            questions = [];
+            let match;
+            while ((match = questionRegex.exec(text)) !== null) {
+                questions.push({ text: match[1].trim(), correct: match[2].toLowerCase() === 'verdadero' });
+            }
+            
+            if (questions.length === 0) {
+                alert('No se encontraron preguntas en el PDF.');
+                return;
+            }
+            
+            document.getElementById('quiz-container').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentIndex >= questions.length) return alert('Fin del cuestionario');
+            document.getElementById('question-text').innerText = questions[currentIndex].text;
+        }
+
+        function answer(userAnswer) {
+            let correct = questions[currentIndex].correct;
+            document.getElementById('feedback').innerText = userAnswer === correct ? 'Correcto ✅' : 'Incorrecto ❌';
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            document.getElementById('feedback').innerText = '';
+            showQuestion();
+        }
+    </script>
+</body>
+</html>
